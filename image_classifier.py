@@ -7,12 +7,9 @@ from torchvision import models
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-import numpy as np
 import os
 import shutil
 from datetime import datetime
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import threading
 from sklearn.model_selection import train_test_split
 
@@ -387,15 +384,6 @@ class ImageClassifier:
                                                           font=("Consolas", 10),
                                                           bg="#fafafa")
         self.predictions_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        # Вкладка 2: График уверенности
-        confidence_frame = ttk.Frame(results_notebook)
-        results_notebook.add(confidence_frame, text="График уверенности")
-
-        self.confidence_figure, self.confidence_ax = plt.subplots(figsize=(6, 4), dpi=80)
-        self.confidence_figure.patch.set_facecolor('#f0f0f1')
-        self.confidence_canvas = FigureCanvasTkAgg(self.confidence_figure, confidence_frame)
-        self.confidence_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
     def build_model(self, num_classes):
         model = models.efficientnet_b0(
@@ -1151,7 +1139,6 @@ class ImageClassifier:
 
             # Отображение результатов
             self.display_classification_results(top3_prob, top3_catid)
-            self.plot_classification_confidence(top3_prob, top3_catid)
 
             # Восстанавливаем кнопку
             self.btn_classify.config(text="🔍 Классифицировать", state=tk.NORMAL)
@@ -1200,49 +1187,6 @@ class ImageClassifier:
                 text += "-" * 30 + "\n"
 
         self.predictions_text.insert(1.0, text)
-
-    def plot_classification_confidence(self, probabilities, categories):
-        """Построение графика уверенности"""
-        self.confidence_ax.clear()
-
-        probs = probabilities.cpu().numpy() * 100
-        cats = categories.cpu().numpy()
-
-        # Получаем названия классов
-        labels = []
-        for cat in cats:
-            class_name = self.idx_to_class.get(cat, f"Class {cat}")
-            # Обрезаем длинные названия
-            if len(class_name) > 20:
-                class_name = class_name[:17] + "..."
-            labels.append(class_name)
-
-        # Цвета для столбцов
-        colors = ['#2ecc71', '#3498db', '#9b59b6', '#e74c3c', '#f39c12']
-
-        # Создаем горизонтальную столбчатую диаграмму
-        y_pos = np.arange(len(probs))
-        bars = self.confidence_ax.barh(y_pos, probs, color=colors[:len(probs)])
-
-        # Настройки графика
-        self.confidence_ax.set_yticks(y_pos)
-        self.confidence_ax.set_yticklabels(labels)
-        self.confidence_ax.set_xlabel('Уверенность (%)')
-        self.confidence_ax.set_title('Топ предсказаний EfficientNet B0')
-        self.confidence_ax.set_xlim([0, 100])
-
-        # Добавляем значения на столбцы
-        for bar, prob in zip(bars, probs):
-            width = bar.get_width()
-            self.confidence_ax.text(width + 1, bar.get_y() + bar.get_height() / 2,
-                                    f'{prob:.1f}%', va='center', fontsize=10)
-
-        # Настраиваем внешний вид
-        self.confidence_ax.grid(True, axis='x', linestyle='--', alpha=0.7)
-        self.confidence_ax.set_facecolor('#f8f9fa')
-
-        self.confidence_figure.tight_layout()
-        self.confidence_canvas.draw()
 
     def update_status(self, message):
         """Обновление статус-бара"""
